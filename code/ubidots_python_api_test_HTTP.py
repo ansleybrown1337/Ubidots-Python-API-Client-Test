@@ -17,7 +17,7 @@ import random
 import time
 
 # Global variables
-ENDPOINT = 'industrial.ubidots.com'
+ENDPOINT = 'industrial.api.ubidots.com'
 DEVICE_LABEL = 'AWQP_Cercospora_7'
 VARIABLE_LABEL = 'Temp (F)'
 TOKEN = ''
