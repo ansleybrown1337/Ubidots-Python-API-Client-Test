@@ -4,14 +4,16 @@ By A.J. Brown
 24 Aug 2022
 
 Help doc for HTTP and Ubidots:
-https://docs.ubidots.com/v1.6/reference/get-variable-data
-https://industrial.api.ubidots.com/api/v1.6/devices/<device_label>/<variable_label>/values
-
+https://docs.ubidots.com/v2.0/reference/get-variable-data
+https://industrial.api.ubidots.com/api/v2.0/devices/<device_label>/<variable_label>/values
 
 This script is designed to pull data from Ubidots servers for streamlined data
-analysis. This initial test script will use low-cost temperature and relative
-humidity sensors deployed in sugar beet fields to monitor cercospora risk.
+analysis.
 '''
+# TODO: update code to work with v2.0; I changed it but didn't test fxns; get_var and get_var_df do not work
+# TODO: Make script into class?
+# TODO: make function to download all data for a device and all vars
+# TODO: make a function to download all data for a group of devices and all vars
 import pandas as pd
 import requests
 import random
@@ -19,30 +21,24 @@ import time
 
 from io import StringIO
 
-# Master device name dictionary with API labels
-deviceID_dict = {'AWQP_Cercospora_7':'e00fce68e24f0a8925c92b4b',
-                 'AWQP_Cercospora_4':'e00fce680eb2a2c6230fd025',
-                 'AWQP_Cercospora_3':'e00fce6811c5d10c70de529b',
-                 'AWQP_Cercospora_2':'e00fce68b726e54b0dda1a5d'}
-                 
 # Global variables
 ENDPOINT = 'industrial.api.ubidots.com'
-DEVICE_NAME  = 'AWQP_Cercospora_7'
-DEVICE_LABEL = deviceID_dict[DEVICE_NAME]
-VARIABLE_LABEL = 't' # temp. in celcius
+DEVICE_NAME  = '' # must manually define using ubidots 'name' device attribute
+DEVICE_LABEL = '' # must manually define using ubidots 'id' device attribute
+VARIABLE_LABEL = '' # must manually define using ubidots 'id' variable attribute
 TOKEN = '' # Place API token here
-HEADERS = {"X-Auth-Token": TOKEN}
+HEADERS = {"X-Auth-Token": TOKEN} # must manually change after defining TOKEN
 DELAY = 1 # Delay in seconds
 
 def get_var(url=ENDPOINT, device=DEVICE_LABEL, variable=VARIABLE_LABEL,
             token=TOKEN, last_values=500):
     try:
-        url = "http://{}/api/v1.6/devices/{}/{}/values/"\
+        url = "http://{}/api/v2.0/devices/{}/{}/values/"\
               "?page_size={}".format(url,
                                      device,
                                      variable,
                                      last_values)
-        #url = http://{}/api/v1.6/devices/{}/{}/values/?page_size={}&format=csv
+        #url = http://{}/api/v2.0/devices/{}/{}/values/?page_size={}&format=csv
         headers = {"X-Auth-Token": token}#, "Content-Type": "application/json"}
         attempts=0
         status_code = 400
@@ -63,12 +59,12 @@ def get_var(url=ENDPOINT, device=DEVICE_LABEL, variable=VARIABLE_LABEL,
 def get_var_df(url=ENDPOINT, device=DEVICE_LABEL, variable=VARIABLE_LABEL,
             token=TOKEN, last_values=500):
     try:
-        url = "http://{}/api/v1.6/devices/{}/{}/values/"\
+        url = "http://{}/api/v2.0/devices/{}/{}/values/"\
               "?page_size={}&format=csv".format(url,
                                                 device,
                                                 variable,
                                                 last_values)
-        #url = http://{}/api/v1.6/devices/{}/{}/values/?page_size={}&format=csv
+        #url = http://{}/api/v2.0/devices/{}/{}/values/?page_size={}&format=csv
         headers = {"X-Auth-Token": token}#, "Content-Type": "application/json"}
         attempts=0
         status_code = 400
@@ -106,7 +102,7 @@ def validate_token(device_id=DEVICE_LABEL, token=TOKEN):
 def get_device_token(device_id=DEVICE_LABEL):
     print("Getting device token for " + device_id)
 
-    resp = requests.get(f"https://industrial.api.ubidots.com/api/v1.6/datasources/{device_id}/tokens", headers=HEADERS).json()
+    resp = requests.get(f"https://industrial.api.ubidots.com/api/v2.0/datasources/{device_id}/tokens", headers=HEADERS).json()
 
     return resp["results"][0]["token"]
 
@@ -122,6 +118,28 @@ def get_all_devices():
         devices.extend(data["results"])
 
     return devices
+
+def get_all_devices_df():
+    return pd.DataFrame(get_all_devices())
+
+def get_device_vars(device_id=DEVICE_LABEL):
+    var_list = []
+
+    next = f"https://industrial.api.ubidots.com/api/v2.0/devices/{device_id}/variables"
+
+    while next:
+        print("Making request to " + next)
+        data = requests.get(next, headers=HEADERS).json()
+        next = data["next"]
+        var_list.extend(data["results"])
+
+    return var_list
+
+def get_device_vars_df(device_id=DEVICE_LABEL):
+    var_df = pd.DataFrame(get_device_vars(device_id=device_id))
+    device_name = var_df.device[0]['name']
+    print(f'Variable dataframe returned for device name: {device_name}')
+    return var_df
 
 def list_devices(token = TOKEN):
     devices = get_all_devices()
