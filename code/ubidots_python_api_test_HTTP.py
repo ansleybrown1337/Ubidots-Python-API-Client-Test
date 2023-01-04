@@ -20,6 +20,7 @@ be integrated.
 '''
 # TODO: Make script into class?
 # TODO: make a function to download all data for a group of devices and all vars
+# NOTE: looks like HEADERS doesn't get passed all the way from get_type_data() to _get_device_vars()
 import pandas as pd
 import requests
 import random
@@ -70,8 +71,7 @@ def get_device_data(device_id=DEVICE_LABEL, headers=HEADERS, last_values=5000):
     '''
     print("Headers = " + str(headers))
     dfs = []
-    for i in get_device_vars_df(device_id=device_id,
-                                headers=headers)['id']:
+    for i in get_device_vars_df(device_id=device_id, headers=headers)['id']:
         print(i)
         df = get_var_df(url=ENDPOINT,
                         device_id=device_id,
