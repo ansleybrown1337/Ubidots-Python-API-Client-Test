@@ -2,7 +2,7 @@
 Ubidots-Python-API-Client-Test-HTTP
 By A.J. Brown
 24 Aug 2022
-Updated: 22 Nov 2022
+Updated: 4 Jan 2023
 
 This script is designed to pull data from Ubidots servers for streamlined data
 analysis.
@@ -33,7 +33,7 @@ DEVICE_NAME  = '' # must manually define using ubidots 'name' device attribute
 DEVICE_LABEL = '' # must manually define using ubidots 'id' device attribute
 VARIABLE_LABEL = '' # must manually define using ubidots 'id' variable attribute
 TOKEN = '' # Place API token here
-HEADERS = {"X-Auth-Token": TOKEN} # must manually change after defining TOKEN
+HEADERS = {"X-Auth-Token": TOKEN} # must manually change after defining TOKEN #, "Content-Type": "application/json"}
 DELAY = 1 # Delay in seconds
 
 def get_type_data(device_type = 'pile-temp-and-cercospora-monitor',
@@ -59,18 +59,25 @@ def get_type_data(device_type = 'pile-temp-and-cercospora-monitor',
 
     return pd.concat(dfs).reset_index(drop=True)
 
-def get_device_data(device_id=DEVICE_LABEL, last_values=5000, token=TOKEN):
+def get_device_data(device_id=DEVICE_LABEL, headers=HEADERS, last_values=5000):
     '''
     Collects all variable data from specified device and returns DataFrame
     with variables as columns, all merged by timestamp.
+    :param device_id: (not used currently) individual device label as created by Ubidots
+    :param headers: http headers to use when making HTTP query (see Global variables)
+    :param last_values: number that designates how many of the most recent values to return in the dataframe
+    :return: pandas.core.frame.DataFrame containing variable values plus timestamps for single device
     '''
+    print("Headers = " + str(headers))
     dfs = []
-    for i in get_device_vars_df(device_id=device_id)['id']:
+    for i in get_device_vars_df(device_id=device_id,
+                                headers=headers)['id']:
         print(i)
-        df = get_var_df(device=device_id,
+        df = get_var_df(url=ENDPOINT,
+                        device_id=device_id,
                         variable=i,
-                        last_values=last_values,
-                        token=token)
+                        headers=headers
+                        last_values=last_values)
         dfs.append(df)
         #print(dfs)
     merged_df = reduce(lambda left, right:     # Merge DataFrames in list
@@ -82,15 +89,24 @@ def get_device_data(device_id=DEVICE_LABEL, last_values=5000, token=TOKEN):
     print('Done.')
     return merged_df
 
-def get_var_df(url=ENDPOINT, device=DEVICE_LABEL, variable=VARIABLE_LABEL,
-            token=TOKEN, last_values=5000):
+def get_var_df(url=ENDPOINT, device_id=DEVICE_LABEL, variable=VARIABLE_LABEL,
+            headers=HEADERS, last_values=5000):
     # tested: good for v1.6 but NOT v2.0
+    '''
+    Function to generate dataframe of a single variable's values
+    :param url: api url for ubidots (see Global variables)
+    :param device_id: (not used currently) individual device label as created by Ubidots
+    :param variable: individual variable label as created by Ubidots
+    :param headers: http headers to use when making HTTP query (see Global variables)
+    :param last_values: number that designates how many of the most recent values to return in the dataframe
+    :return: pandas.core.frame.DataFrame containing variable values plus timestamps for single device
+    '''
     try:
         '''
         # not working, and I'm not sure why
         url = "https://{}/api/v1.6/devices/{}/{}/values/"\
               "?page_size={}&format=csv".format(url,
-                                                device,
+                                                device_id,
                                                 variable,
                                                 last_values)
         '''
@@ -98,11 +114,10 @@ def get_var_df(url=ENDPOINT, device=DEVICE_LABEL, variable=VARIABLE_LABEL,
               "?page_size={}&format=csv".format(url,
                                                 variable,
                                                 last_values)
-        headers = {"X-Auth-Token": token}#, "Content-Type": "application/json"}
         attempts=0
         status_code = 400
         print(url)
-        print(headers)
+        print("Headers = " + str(headers))
         while status_code >= 400 and attempts < 5:
             print("[INFO] Retrieving data, attempt number: {}".format(attempts))
             req = requests.get(url=url, headers=headers)
@@ -115,38 +130,67 @@ def get_var_df(url=ENDPOINT, device=DEVICE_LABEL, variable=VARIABLE_LABEL,
 
     return pd.read_csv(StringIO(req.text), sep=',')
 
-def get_all_devices_df():
+def get_all_devices_df(headers=HEADERS):
     #tested: good for v2.0
-    df = pd.DataFrame(_get_all_devices())
+    '''
+    Function to generate dataframe of all Ubidot devices and associated demographic info (not variables).
+    Mostly used to find specific device label
+    :param device_id: individual device label as created by Ubidots
+    :param headers: http headers to use when making HTTP query (see Global variables)
+    :return: pandas.core.frame.DataFrame containing variable info for single device
+    '''
+    df = pd.DataFrame(_get_all_devices(headers=headers))
     print('Done.')
     return df
 
-def get_device_vars_df(device_id=DEVICE_LABEL):
+def get_device_vars_df(device_id=DEVICE_LABEL, headers=HEADERS):
     # tested: good for v2.0
-    var_df = pd.DataFrame(_get_device_vars(device_id=device_id))
+    '''
+    Function to generate dataframe of a single device's variable names and associated demographic info.
+    Mostly used to find variable labels for a specific device
+    :param device_id: individual device label as created by Ubidots
+    :param headers: http headers to use when making HTTP query (see Global variables)
+    :return: pandas.core.frame.DataFrame containing variable info for single device
+    '''
+    var_df = pd.DataFrame(_get_device_vars(device_id=device_id, headers=headers))
     device_name = var_df.device[0]['name']
     print(f'{bcolors.OKCYAN}Variable dataframe returned for device name:\
             {device_name}{bcolors.ENDC}')
     return var_df
 
-def _get_all_devices():
+def _get_all_devices(headers=HEADERS):
     # tested: good for v2.0
+    '''
+    Function to generate list of all Ubidot devices and associated demographic info (not variables).
+    :private function (should not need to run, but used in main fxns)
+    :param headers: http headers to use when making HTTP query (see Global variables)
+    :return: a list of dictionaries (1 dict = 1 device)
+    '''
     devices = []
     next = "https://industrial.api.ubidots.com/api/v2.0/devices/"
     while next:
         print("Making request to " + next)
-        data = requests.get(next, headers=HEADERS).json()
+        print("Headers = " + str(headers))
+        data = requests.get(next, headers=headers).json()
         next = data["next"]
         devices.extend(data["results"])
     return devices
 
-def _get_device_vars(device_id=DEVICE_LABEL):
+def _get_device_vars(device_id=DEVICE_LABEL, headers=HEADERS):
     # tested: good for v2.0
+    '''
+    Function to generate list of a single device's variables and associated demographic info.
+    :private function (should not need to run, but used in main fxns)
+    :param device_id: individual device label as created by Ubidots
+    :param headers: http headers to use when making HTTP query (see Global variables)
+    :return: a list of dictionaries (1 dict = 1 device)
+    '''
     var_list = []
     next = f"https://industrial.api.ubidots.com/api/v2.0/devices/{device_id}/variables"
     while next:
         print("Making request to " + next)
-        data = requests.get(next, headers=HEADERS).json()
+        print("Headers = " + str(headers))
+        data = requests.get(next, headers=headers).json()
         next = data["next"]
         var_list.extend(data["results"])
     return var_list
