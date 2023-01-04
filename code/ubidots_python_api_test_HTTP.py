@@ -31,18 +31,25 @@ from io import StringIO
 # Global variables
 ENDPOINT = 'industrial.api.ubidots.com'
 DEVICE_NAME  = '' # must manually define using ubidots 'name' device attribute
-DEVICE_LABEL = '' # must manually define using ubidots 'id' device attribute
-VARIABLE_LABEL = '' # must manually define using ubidots 'id' variable attribute
+DEVICE_LABEL = '' # must manually define using ubidots device 'id' attribute
+VARIABLE_LABEL = '' # must manually define using ubidots variable 'id' attribute
 TOKEN = '' # Place API token here
 HEADERS = {"X-Auth-Token": TOKEN} # must manually change after defining TOKEN #, "Content-Type": "application/json"}
 DELAY = 1 # Delay in seconds
 
-def get_type_data(device_type = 'pile-temp-and-cercospora-monitor',
-                    # other type: 'low-cost-water-sampler'
-                  last_values = 5000,
-                  token = TOKEN):
+def get_type_data(device_type = 'pile-temp-and-cercospora-monitor', # other type can be: 'low-cost-water-sampler'
+                  headers=HEADERS,
+                  last_values = 5000):
+    '''
+    Collects all variable data from all devices of a specified type, returns as single dataframe
+    with variables and  as columns, all organized by timestamp.
+    :param device_type: device type label as indicated in Ubidots; can also be found in individual device properties
+    :param headers: http headers to use when making HTTP query (see Global variables)
+    :param last_values: number that designates how many of the most recent values to return in the dataframe
+    :return: pandas.core.frame.DataFrame containing variable values plus timestamps for single device
+    '''
     # get list of all devices containing only name, id, and properties
-    device_df = get_all_devices_df()[['name','id','properties']]
+    device_df = get_all_devices_df(headers=headers)[['name','id','properties']]
     # convert properties from dict to df
     properties_df = device_df['properties'].apply(pd.Series)
     # merge df's back together for clean stratification
@@ -54,7 +61,7 @@ def get_type_data(device_type = 'pile-temp-and-cercospora-monitor',
         name = type_df.iloc[i]['name']
         df = get_device_data(device_id=j,
                              last_values=last_values,
-                             token=token)
+                             headers=headers)
         df['name'] = name
         dfs.append(df)
 
@@ -64,7 +71,7 @@ def get_device_data(device_id=DEVICE_LABEL, headers=HEADERS, last_values=5000):
     '''
     Collects all variable data from specified device and returns DataFrame
     with variables as columns, all merged by timestamp.
-    :param device_id: (not used currently) individual device label as created by Ubidots
+    :param device_id: individual device label as created by Ubidots
     :param headers: http headers to use when making HTTP query (see Global variables)
     :param last_values: number that designates how many of the most recent values to return in the dataframe
     :return: pandas.core.frame.DataFrame containing variable values plus timestamps for single device
@@ -103,7 +110,7 @@ def get_var_df(url=ENDPOINT, device_id=DEVICE_LABEL, variable=VARIABLE_LABEL,
     '''
     try:
         '''
-        # not working, and I'm not sure why
+        # TODO: not working, and I'm not sure why
         url = "https://{}/api/v1.6/devices/{}/{}/values/"\
               "?page_size={}&format=csv".format(url,
                                                 device_id,
