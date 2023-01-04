@@ -76,7 +76,7 @@ def get_device_data(device_id=DEVICE_LABEL, headers=HEADERS, last_values=5000):
         df = get_var_df(url=ENDPOINT,
                         device_id=device_id,
                         variable=i,
-                        headers=headers
+                        headers=headers,
                         last_values=last_values)
         dfs.append(df)
         #print(dfs)
