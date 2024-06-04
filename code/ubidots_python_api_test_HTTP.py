@@ -22,9 +22,11 @@ be integrated.
 # TODO: make a function to download all data for a group of devices and all vars
 # NOTE: looks like HEADERS doesn't get passed all the way from get_type_data() to _get_device_vars()
 import pandas as pd
+import os
 import requests
 import random
 import time
+from datetime import datetime
 from functools import reduce
 from io import StringIO
 
@@ -36,6 +38,54 @@ VARIABLE_LABEL = '' # must manually define using ubidots variable 'id' attribute
 TOKEN = '' # Place API token here
 HEADERS = {"X-Auth-Token": TOKEN} # must manually change after defining TOKEN #, "Content-Type": "application/json"}
 DELAY = 1 # Delay in seconds
+
+def get_all_type_var_ids_and_location(device_type = 'pile-temp-and-cercospora-monitor', # other type can be: 'low-cost-water-sampler'
+                                    headers=HEADERS,
+                                    unl_export = False):
+    '''
+    Collects the ids of all variables for a specified device type, as well as the latitue and longitutude.
+    This is for convenient delivery of API ids for further data collection by us or others (e.g., UNL).
+    :param device_type: device type label as indicated in Ubidots; can also be found in individual device properties
+    :param headers: http headers to use when making HTTP query (see Global variables)
+    :return: pandas.core.frame.DataFrame containing variable ids and location for all devices of specified type
+    '''
+    # get list of all devices containing only name, id, and properties
+    device_df = get_all_devices_df(headers=headers)[['name','id','properties']]
+    # convert properties from dict to df
+    properties_df = device_df['properties'].apply(pd.Series)
+    # get the locations from the device properties
+    locations_df = properties_df['_location_fixed'].apply(pd.Series)
+    # merge df's back together for clean stratification
+    clean_df = device_df.join(properties_df)[['_device_type','name','id']]
+    clean_df = clean_df.join(locations_df)[['_device_type','lat','lng','name','id']]
+    # select only devices of specified type
+    type_df = clean_df[clean_df['_device_type'] == device_type]
+    dfs = []
+    for i,j in enumerate(type_df['id']):
+        name = type_df.iloc[i]['name']
+        df = get_device_vars_df(device_id=j, headers=headers)
+        df['name'] = name
+        dfs.append(df)
+
+    # get vars and ids in long format
+    type_vars_df = pd.concat(dfs).reset_index(drop=True)
+    # pivot to wide format
+    pivot_df = type_vars_df.pivot(
+        index='name', columns='label', values='id').reset_index()
+    # merge with lat/lng columns from type_df dataframe
+    pivot_df_wLocations = pivot_df.merge(type_df[['name','lat','lng']], on='name', how='left') 
+
+    if unl_export == True:
+        # drop all columns except for those needed for UNL: 'name', 'rh', 't', 'lat', 'lng'
+        unl_df = pivot_df_wLocations[['name', 'rh', 't', 'lat', 'lng']]
+        # get timestanmp and generate file name
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_filename = os.path.join(os.getcwd(), f'unl_export_{timestamp}.csv')
+        # export to csv
+        unl_df.to_csv(f'{output_filename}', index=False)
+    
+    return pivot_df_wLocations
+
 
 def get_type_data(device_type = 'pile-temp-and-cercospora-monitor', # other type can be: 'low-cost-water-sampler'
                   headers=HEADERS,
@@ -144,7 +194,7 @@ def get_all_devices_df(headers=HEADERS):
     Mostly used to find specific device label
     :param device_id: individual device label as created by Ubidots
     :param headers: http headers to use when making HTTP query (see Global variables)
-    :return: pandas.core.frame.DataFrame containing variable info for single device
+    :return: pandas.core.frame.DataFrame containing list of devices and their properties
     '''
     df = pd.DataFrame(_get_all_devices(headers=headers))
     print('Done.')
