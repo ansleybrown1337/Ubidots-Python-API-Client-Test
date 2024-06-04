@@ -1,14 +1,25 @@
 # Ubidots Python API Client Test
-By A.J. Brown
-24 Aug 2022
-ansleybrown1337@gmail.com
+By A.J. Brown <br/>
+24 Aug 2022 <br/>
+ansleybrown1337@gmail.com <br/>
+Updated: 4 June 2024
 
-Python script to test the download of ubidots data for streamlined data
+## Description
+
+A Python script that downloads ubidots data for streamlined data
 analysis.
 
-File 1, "ubidots_python_api_test", uses the Ubidots API Client module.
+## Code
 
-File 2, "ubidots_python_api_test_HTTP" uses HTTP protocols.
+File 1, "ubidots_python_api_test.py", uses the Ubidots API Client module.
 
-During this test, I found it much easier to access data via HTTP protocols, but
-I'll leave both here for reference.
+File 2, "ubidots_python_api_test_HTTP.py" uses HTTP protocols. **(preferred method)**
+
+## Documentation
+
+In the documentation folder, you will find instructions on how to run the code
+via IPython in an Anaconda environment.
+
+## Output
+
+The output folder contains the data downloaded from Ubidots, which has been cleaned and made ready for providing necessary information to UNL collaborators for the cercospora sensor project between AWQP and Western Sugar.
