@@ -9,6 +9,9 @@ Updated: 4 June 2024
 A Python script that downloads ubidots data for streamlined data
 analysis.
 
+> [!TIP]
+> If you just want to run the code and get the updated WS GPS data output, simply run the .exe file found in the "code" folder. This will automatically download the data and provide the output in the "code" folder. **Note: this EXE file is only available for Windows users.**
+
 ## Code
 
 File 1, "ubidots_python_api_test.py", uses the Ubidots API Client module.
