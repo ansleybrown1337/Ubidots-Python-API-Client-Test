@@ -325,23 +325,32 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 if __name__ == '__main__':
-    import ubidots_python_api_test_HTTP as u
-    
+    # Initialization message
+    print("Initializing code...")
+
     # Prompt the user for the API token
-    TOKEN = input("Please enter your API token: ")
-    
+    while True:
+        TOKEN = input("Please enter your API token: ")
+        if TOKEN:
+            break
+        else:
+            print("API token cannot be empty. Please try again.")
+
     # Set the headers with the provided token
     HEADERS = {"X-Auth-Token": TOKEN}
-    
+
     # Call the function with the necessary parameters
-    unl_df = u.get_all_type_var_ids_and_location(
+    unl_df = get_all_type_var_ids_and_location(
         device_type='pile-temp-and-cercospora-monitor', 
         headers=HEADERS, 
         unl_export=True)
-    
-    # Display the dataframe (optional)
-    print("Datafram export complete. Resulting csv can be found in the current working directory (i.e., 'code').")
 
+    # Display the dataframe (optional)
+    print("Dataframe export complete. Resulting CSV can be found in the current working directory (i.e., 'code').")
+
+    # Inform the user that the window will close and add a delay
+    print("The window will close in 10 seconds. Please make a note of any information displayed.")
+    time.sleep(10)
 r'''
 How to execute the script from the terminal:
 
@@ -349,7 +358,7 @@ How to execute the script from the terminal:
 2. Navigate to the directory where your script is located. For example:
     cd C:\Users\AJ-CPU\Documents\GitHub\Ubidots-Python-API-Client-Test\code
 3. Activate your virtual environment if necessary. For example:
-    activate playground2
+    activate ubidots_exe
 4. Run the script using Python. Make sure you have your virtual environment 
    activated if necessary. The command to run the script is:
     python ubidots_python_api_test_HTTP.py

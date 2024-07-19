@@ -7,13 +7,19 @@ The `ubidots_python_api_test_HTTP.exe` file was created for easy data delivery t
 
 This document describes the procedure for obtaining the necessary data from CSU AWQP CLS sensors, and delivering it to UNL collaborators for display on the PHREC dashboard. It is intended for CSU and WS employees involved in this collaborative effort.
 
-## Step 1: Use Survey123 to obtain GPS data
+## Step 1: Use Survey123 or Ubidots to obtain GPS data
+### Option 1: Survey 123
 CSU uses the ESRI platform, Survey123, to collect GPS data from WS agriculturalists when a CLS sensor is deployed. Login to Survey123 using CSU credentials at [this link that goes directly to the CLS data page](https://arcg.is/1y0TKD1).
 
 Username: `agwaterquality_CSUrams`<br>
 Password: `Waterlab005`
 
 Click on each survey entry to view the gps location and record the lat/long values.
+
+### Option 2: Ubidots
+The GPS location can be modified in Ubidots manually.  The resulting lat/long values can then be recorded for each respective device if this location is correct.
+
+An instructional video on how to do so can be [found here](https://www.loom.com/share/1c19825f15bd4a9e90f333233b1f379b?sid=7f25672c-74b6-4239-a016-52274bf71ec6).
 
 ## Step 2: Add GPS data to Ubidots for each sensor
 The GPS data then need to be added to each sensor individually on the CSU Ubidots platform. [Login to it here](https://industrial.ubidots.com/app/devices) and use the following credentials:
