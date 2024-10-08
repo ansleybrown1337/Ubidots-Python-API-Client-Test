@@ -21,12 +21,12 @@ be integrated.
 # TODO: Make script into class?
 # TODO: make a function to download all data for a group of devices and all vars
 # NOTE: looks like HEADERS doesn't get passed all the way from get_type_data() to _get_device_vars()
+import config # <<< this is the config file for the Ubidots API
 import pandas as pd
 import os
 import requests
-import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import reduce
 from io import StringIO
 
@@ -34,14 +34,47 @@ from io import StringIO
 ENDPOINT = 'industrial.api.ubidots.com'
 DEVICE_NAME  = '' # must manually define using ubidots 'name' device attribute
 DEVICE_LABEL = '' # must manually define using ubidots device 'id' attribute
+DEVICE_TYPE = "low-cost-water-sampler" # other option is 'pile-temp-and-cercospora-monitor'
 VARIABLE_LABEL = '' # must manually define using ubidots variable 'id' attribute
-TOKEN = '' # Place API token here
+TOKEN = config.TOKEN # Place API token in config.py file
 HEADERS = {"X-Auth-Token": TOKEN} # must manually change after defining TOKEN #, "Content-Type": "application/json"}
 DELAY = 1 # Delay in seconds
 
-def get_all_type_var_ids_and_location(device_type = 'pile-temp-and-cercospora-monitor', # other type can be: 'low-cost-water-sampler'
+def calculate_last_values(start_time = "2024-01-01 00:00:00", 
+                          interval_minutes = 5) -> int:
+    """
+    Calculate the number of data points collected from a specified start datetime until now, 
+    given a collection interval.
+    
+    Parameters:
+        start_time (str): The start time in "YYYY-MM-DD HH:MM:SS" format.
+        interval_minutes (int): The time interval between each data point in minutes.
+
+    Returns:
+        int: The number of data points collected within the specified range.
+    """
+    # Convert the input string to a datetime object for the start time
+    start_dt = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+    
+    # Get the current time
+    now = datetime.now()
+    
+    # Calculate the total duration between the start datetime and now
+    total_duration = now - start_dt
+    
+    # Calculate the number of intervals within the total duration
+    interval_duration = timedelta(minutes=interval_minutes)
+    data_point_count = total_duration // interval_duration
+    
+    # Add one more point to count the starting data point
+    return data_point_count + 1
+
+LAST_VALUES = calculate_last_values() # <<< this is the number of data points to collect
+
+def get_all_type_var_ids_and_location(device_type = DEVICE_TYPE,
                                     headers=HEADERS,
-                                    unl_export = False):
+                                    unl_export = False
+                                    ):
     '''
     Collects the ids of all variables for a specified device type, as well as the latitue and longitutude.
     This is for convenient delivery of API ids for further data collection by us or others (e.g., UNL).
@@ -86,10 +119,10 @@ def get_all_type_var_ids_and_location(device_type = 'pile-temp-and-cercospora-mo
     
     return pivot_df_wLocations
 
-
-def get_type_data(device_type = 'pile-temp-and-cercospora-monitor', # other type can be: 'low-cost-water-sampler'
+def get_type_data(device_type = DEVICE_TYPE,
                   headers=HEADERS,
-                  last_values = 5000):
+                  last_values = LAST_VALUES,
+                  export_csv = False):
     '''
     Collects all variable data from all devices of a specified type, returns as single dataframe
     with variables and  as columns, all organized by timestamp.
@@ -115,9 +148,24 @@ def get_type_data(device_type = 'pile-temp-and-cercospora-monitor', # other type
         df['name'] = name
         dfs.append(df)
 
-    return pd.concat(dfs).reset_index(drop=True)
+    type_data_df = pd.concat(dfs).reset_index(drop=True)
+    # print confirmation message with beginning and end timestamps using warning colors from bcolors class below
+    print(f'\033[93mData collection complete for {device_type} devices.\033[0m')
+    # print start timestamp by finding the minimum timestamp in the dataframe
+    print(f"Start timestamp: {type_data_df['Human readable date (UTC)'].min()}")
+    # print end timestamp by finding the maximum timestamp in the dataframe
+    print(f"End timestamp: {type_data_df['Human readable date (UTC)'].max()}")
 
-def get_device_data(device_id=DEVICE_LABEL, headers=HEADERS, last_values=5000):
+    # export to csv with timestamp
+    if export_csv == True:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_filename = os.path.join(os.getcwd(), f'{device_type}_export_{timestamp}.csv')
+        type_data_df.to_csv(f'{output_filename}', index=False)
+        print(f'\033[1mExported data to {output_filename}.\033[0m')
+
+    return type_data_df
+
+def get_device_data(device_id=DEVICE_LABEL, headers=HEADERS, last_values=LAST_VALUES):
     '''
     Collects all variable data from specified device and returns DataFrame
     with variables as columns, all merged by timestamp.
@@ -147,7 +195,7 @@ def get_device_data(device_id=DEVICE_LABEL, headers=HEADERS, last_values=5000):
     return merged_df
 
 def get_var_df(url=ENDPOINT, device_id=DEVICE_LABEL, variable=VARIABLE_LABEL,
-            headers=HEADERS, last_values=5000):
+            headers=HEADERS, last_values=LAST_VALUES):
     # tested: good for v1.6 but NOT v2.0
     '''
     Function to generate dataframe of a single variable's values
@@ -253,7 +301,7 @@ def _get_device_vars(device_id=DEVICE_LABEL, headers=HEADERS):
     return var_list
 
 def _get_var(url=ENDPOINT, device=DEVICE_LABEL, variable=VARIABLE_LABEL,
-            token=TOKEN, last_values=5000):
+            token=TOKEN, last_values=LAST_VALUES):
     # tested: good for v1.6 but NOT v2.0
     try:
         '''
@@ -340,10 +388,10 @@ if __name__ == '__main__':
     HEADERS = {"X-Auth-Token": TOKEN}
 
     # Call the function with the necessary parameters
-    unl_df = get_all_type_var_ids_and_location(
-        device_type='pile-temp-and-cercospora-monitor', 
-        headers=HEADERS, 
-        unl_export=True)
+    lcs_df = get_type_data(device_type = DEVICE_TYPE,
+                  headers=HEADERS,
+                  last_values = LAST_VALUES,
+                  export_csv = True)
 
     # Display the dataframe (optional)
     print("Dataframe export complete. Resulting CSV can be found in the current working directory (i.e., 'code').")
