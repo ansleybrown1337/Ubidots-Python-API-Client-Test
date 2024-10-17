@@ -1,6 +1,7 @@
 /code/__pycache__
 /code/build
 /code/dist
+/code/config.py
 /code/ubidots_python_api_test_HTTP.exe
 /code/ubidots_python_api_test_HTTP.spec
 /documentation/how-to-use-exe.md

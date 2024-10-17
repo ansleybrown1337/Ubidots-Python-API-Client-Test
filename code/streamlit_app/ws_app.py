@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import sys
 from datetime import datetime
+from tabulate import tabulate
 
 # Add the 'code' folder to the system path to import the script
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -15,11 +16,11 @@ def convert_df_to_html_table(df):
     return df.to_html(index=False, justify="left")
 
 # Function to format the dataframe as a fixed-width table for plain text
-def convert_df_to_fixed_width(df):
-    """Convert dataframe to a fixed-width table string format."""
-    # Create a formatted string with columns evenly spaced using ljust for left-aligned text
-    formatted_table = df.to_string(index=False, col_space=15, justify="left")
-    return formatted_table
+def convert_df_to_tabulate(df):
+    """
+    Convert a dataframe into a GitHub-flavored markdown table format using tabulate.
+    """
+    return tabulate(df, headers='keys', tablefmt='github', showindex=False)
 
 # Cache the function that fetches the device data to avoid re-running it unnecessarily
 @st.cache_data(show_spinner=True)
@@ -127,14 +128,13 @@ def main():
                         if st.button("Generate Email to UNL"):
 
                             # Generate the email body with device information (plain text for preview)
-                            table_html = convert_df_to_html_table(filtered_df)
                             email_body_plain = f"""
                                 Dear Xin and Wei-Zhen,
 
                                 Please find the selected sensor data for your integration into the UNL CLS Daily Infection Risk Dashboard. 
 
                                 Device Information:
-                                {convert_df_to_fixed_width(filtered_df)}
+                                {convert_df_to_tabulate(filtered_df)}
 
                                 Best regards,
                                 [Your Name]
@@ -149,7 +149,7 @@ def main():
                             # Create a clickable mailto link
                             mailto_link = f'mailto:xin.qiao@unl.edu,wei-zhen.liang@unl.edu?subject=Device%20Data%20for%20UNL%20CLS%20Dashboard&body={email_body_encoded}'
                             
-                            st.markdown(f'[Click here to send email to UNL]({mailto_link})', unsafe_allow_html=True)
+                            st.markdown(f'[Click here to send email to UNL]({mailto_link})')
 
                 else:
                     st.warning("Please select at least one device to display the data.")

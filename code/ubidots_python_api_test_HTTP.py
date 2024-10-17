@@ -39,52 +39,67 @@ TOKEN = '' # Place API token here
 HEADERS = {"X-Auth-Token": TOKEN} # must manually change after defining TOKEN #, "Content-Type": "application/json"}
 DELAY = 1 # Delay in seconds
 
-def get_all_type_var_ids_and_location(device_type = 'pile-temp-and-cercospora-monitor', # other type can be: 'low-cost-water-sampler'
-                                    headers=HEADERS,
-                                    unl_export = False):
+def get_all_type_var_ids_and_location(device_type='pile-temp-and-cercospora-monitor', 
+                                      headers=HEADERS,
+                                      unl_export=False):
     '''
-    Collects the ids of all variables for a specified device type, as well as the latitue and longitutude.
-    This is for convenient delivery of API ids for further data collection by us or others (e.g., UNL).
+    Collects the ids of all variables for a specified device type, as well as the latitude and longitude.
     :param device_type: device type label as indicated in Ubidots; can also be found in individual device properties
     :param headers: http headers to use when making HTTP query (see Global variables)
     :return: pandas.core.frame.DataFrame containing variable ids and location for all devices of specified type
     '''
-    # get list of all devices containing only name, id, and properties
-    device_df = get_all_devices_df(headers=headers)[['name','id','properties']]
-    # convert properties from dict to df
+    # Get list of all devices containing only name, id, and properties
+    device_df = get_all_devices_df(headers=headers)[['name', 'id', 'properties']]
+    # Convert properties from dict to df
     properties_df = device_df['properties'].apply(pd.Series)
-    # get the locations from the device properties
+    # Get the locations from the device properties
     locations_df = properties_df['_location_fixed'].apply(pd.Series)
-    # merge df's back together for clean stratification
-    clean_df = device_df.join(properties_df)[['_device_type','name','id']]
-    clean_df = clean_df.join(locations_df)[['_device_type','lat','lng','name','id']]
-    # select only devices of specified type
+    # Merge df's back together for clean stratification
+    clean_df = device_df.join(properties_df)[['_device_type', 'name', 'id']]
+    clean_df = clean_df.join(locations_df)[['_device_type', 'lat', 'lng', 'name', 'id']]
+    # Select only devices of specified type
     type_df = clean_df[clean_df['_device_type'] == device_type]
     dfs = []
-    for i,j in enumerate(type_df['id']):
+    
+    for i, j in enumerate(type_df['id']):
         name = type_df.iloc[i]['name']
         df = get_device_vars_df(device_id=j, headers=headers)
-        df['name'] = name
-        dfs.append(df)
+        if not df.empty:  # Check if the DataFrame is not empty
+            df['name'] = name
+            dfs.append(df)
 
-    # get vars and ids in long format
-    type_vars_df = pd.concat(dfs).reset_index(drop=True)
-    # pivot to wide format
-    pivot_df = type_vars_df.pivot(
-        index='name', columns='label', values='id').reset_index()
-    # merge with lat/lng columns from type_df dataframe
-    pivot_df_wLocations = pivot_df.merge(type_df[['name','lat','lng']], on='name', how='left') 
+    # Filter out empty or all-NA dataframes before concatenation
+    non_empty_dfs = [df for df in dfs if not df.empty and not df.isna().all(axis=None)]
+    
+    # Ensure columns are not all-NA before concatenation
+    for idx, df in enumerate(non_empty_dfs):
+        non_empty_dfs[idx] = df.dropna(axis=1, how='all')  # Drop columns that are all NaNs
 
-    if unl_export == True:
-        # drop all columns except for those needed for UNL: 'name', 'rh', 't', 'lat', 'lng'
-        unl_df = pivot_df_wLocations[['name', 'rh', 't', 'lat', 'lng']]
-        # get timestanmp and generate file name
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_filename = os.path.join(os.getcwd(), f'unl_export_{timestamp}.csv')
-        # export to csv
-        unl_df.to_csv(f'{output_filename}', index=False)
+    if non_empty_dfs:
+        type_vars_df = pd.concat(non_empty_dfs).reset_index(drop=True)
+    else:
+        type_vars_df = pd.DataFrame()  # Handle the case when no valid dataframes exist
+    
+    # Pivot to wide format
+    if not type_vars_df.empty:
+        pivot_df = type_vars_df.pivot(index='name', columns='label', values='id').reset_index()
+        # Merge with lat/lng columns from type_df dataframe
+        pivot_df_wLocations = pivot_df.merge(type_df[['name', 'lat', 'lng']], on='name', how='left')
+    else:
+        pivot_df_wLocations = pd.DataFrame()
+
+    if unl_export:
+        # Drop all columns except for those needed for UNL: 'name', 'rh', 't', 'lat', 'lng'
+        if not pivot_df_wLocations.empty:
+            unl_df = pivot_df_wLocations[['name', 'rh', 't', 'lat', 'lng']]
+            # Get timestamp and generate file name
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_filename = os.path.join(os.getcwd(), f'unl_export_{timestamp}.csv')
+            # Export to CSV
+            unl_df.to_csv(f'{output_filename}', index=False)
     
     return pivot_df_wLocations
+
 
 
 def get_type_data(device_type = 'pile-temp-and-cercospora-monitor', # other type can be: 'low-cost-water-sampler'
