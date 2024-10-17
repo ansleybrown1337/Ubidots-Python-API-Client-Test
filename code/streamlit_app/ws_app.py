@@ -13,7 +13,7 @@ from ubidots_python_api_test_HTTP import get_all_type_var_ids_and_location
 # Function to format email text
 def generate_email_body(df):
     # Generate table in github markdown format
-    table_text = tabulate(df, headers="keys", tablefmt="tsv", showindex=False)
+    table_text = tabulate(df, headers="keys", tablefmt="github", showindex=False)
     
     # Email content with proper spacing
     email_body = f"""
