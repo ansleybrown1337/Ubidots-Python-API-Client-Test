@@ -18,7 +18,7 @@ def convert_df_to_html_table(df):
 # Function to format email text
 def generate_email_body(df):
     # Generate table in github markdown format
-    table_text = tabulate(df, headers="keys", tablefmt="github", showindex=False)
+    table_text = tabulate(df, headers="keys", tablefmt="tsv", showindex=False)
     
     # Email content with proper spacing
     email_body = f"""
