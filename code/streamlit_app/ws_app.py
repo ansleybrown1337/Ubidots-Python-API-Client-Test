@@ -2,7 +2,6 @@ import streamlit as st
 import os
 import sys
 from datetime import datetime
-from tabulate import tabulate
 
 # Add the 'code' folder to the system path to import the script
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -10,10 +9,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Import the necessary function from your Python script
 from ubidots_python_api_test_HTTP import get_all_type_var_ids_and_location
 
-# Function to format email text
+# Function to format email text with CSV content
 def generate_email_body(df):
-    # Generate table in github markdown format
-    table_text = tabulate(df, headers="keys", tablefmt="github", showindex=False)
+    # Generate CSV format text
+    csv_text = df.to_csv(index=False)
     
     # Email content with proper spacing
     email_body = f"""
@@ -21,8 +20,8 @@ Dear Xin and Wei-Zhen,
 
 Please find the selected sensor data for your integration into the UNL CLS Daily Infection Risk Dashboard.
 
-Device Information:
-{table_text}
+Device Information (CSV format):
+{csv_text}
 
 Best regards,
 [Your Name]
@@ -140,7 +139,7 @@ def main():
                             st.code(email_body_plain)
 
                             # URL encode the email body for mailto link
-                            email_body_encoded = email_body_plain.replace("\n", "%0A").replace("\t", "%09").replace(" ", "%20")
+                            email_body_encoded = email_body_plain.replace("\n", "%0A").replace(" ", "%20")
 
                             # Create a clickable mailto link
                             mailto_link = f'mailto:xin.qiao@unl.edu,wei-zhen.liang@unl.edu?subject=Device%20Data%20for%20UNL%20CLS%20Dashboard&body={email_body_encoded}'
