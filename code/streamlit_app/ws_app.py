@@ -15,12 +15,25 @@ def convert_df_to_html_table(df):
     """Convert a dataframe into an HTML table format."""
     return df.to_html(index=False, justify="left")
 
-# Function to format the dataframe as a fixed-width table for plain text
-def convert_df_to_tabulate(df):
-    """
-    Convert a dataframe into a GitHub-flavored markdown table format using tabulate.
-    """
-    return tabulate(df, headers='keys', tablefmt='github', showindex=False)
+# Function to format email text
+def generate_email_body(df):
+    # Generate table in github markdown format
+    table_text = tabulate(df, headers="keys", tablefmt="github", showindex=False)
+    
+    # Email content with proper spacing
+    email_body = f"""
+Dear Xin and Wei-Zhen,
+
+Please find the selected sensor data for your integration into the UNL CLS Daily Infection Risk Dashboard.
+
+Device Information:
+{table_text}
+
+Best regards,
+[Your Name]
+"""
+
+    return email_body
 
 # Cache the function that fetches the device data to avoid re-running it unnecessarily
 @st.cache_data(show_spinner=True)
@@ -126,30 +139,18 @@ def main():
                             [CLS Daily Infection Risk Dashboard](https://phrec-irrigation.com/#/cls_monitoring).
                         """)
                         if st.button("Generate Email to UNL"):
-
-                            # Generate the email body with device information (plain text for preview)
-                            email_body_plain = f"""
-                                Dear Xin and Wei-Zhen,
-
-                                Please find the selected sensor data for your integration into the UNL CLS Daily Infection Risk Dashboard. 
-
-                                Device Information:
-                                {convert_df_to_tabulate(filtered_df)}
-
-                                Best regards,
-                                [Your Name]
-                            """
+                            email_body_plain = generate_email_body(filtered_df)
                             
-                            st.markdown("Email text preview (copy/paste if needed):")
+                            # Display the email content in a code block for preview
                             st.code(email_body_plain)
 
-                            # Generate the email HTML body using table_html for the mailto link
+                            # URL encode the email body for mailto link
                             email_body_encoded = email_body_plain.replace("\n", "%0A").replace(" ", "%20")
 
                             # Create a clickable mailto link
                             mailto_link = f'mailto:xin.qiao@unl.edu,wei-zhen.liang@unl.edu?subject=Device%20Data%20for%20UNL%20CLS%20Dashboard&body={email_body_encoded}'
                             
-                            st.markdown(f'[Click here to send email to UNL]({mailto_link})')
+                            st.markdown(f'[Click here to send email to UNL]({mailto_link})', unsafe_allow_html=True)
 
                 else:
                     st.warning("Please select at least one device to display the data.")
