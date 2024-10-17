@@ -10,11 +10,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Import the necessary function from your Python script
 from ubidots_python_api_test_HTTP import get_all_type_var_ids_and_location
 
-# Function to convert a dataframe to HTML table for email body
-def convert_df_to_html_table(df):
-    """Convert a dataframe into an HTML table format."""
-    return df.to_html(index=False, justify="left")
-
 # Function to format email text
 def generate_email_body(df):
     # Generate table in github markdown format
@@ -145,7 +140,7 @@ def main():
                             st.code(email_body_plain)
 
                             # URL encode the email body for mailto link
-                            email_body_encoded = email_body_plain.replace("\n", "%0A").replace(" ", "%20")
+                            email_body_encoded = email_body_plain.replace("\n", "%0A").replace("\t", "%09").replace(" ", "%20")
 
                             # Create a clickable mailto link
                             mailto_link = f'mailto:xin.qiao@unl.edu,wei-zhen.liang@unl.edu?subject=Device%20Data%20for%20UNL%20CLS%20Dashboard&body={email_body_encoded}'
