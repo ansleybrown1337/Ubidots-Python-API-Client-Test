@@ -10,29 +10,28 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Import the necessary function from your Python script
 from ubidots_python_api_test_HTTP import get_all_type_var_ids_and_location
 
-# Function to convert a dataframe to HTML table for email body
-def convert_df_to_html_table(df):
-    """Convert a dataframe into an HTML table format."""
-    return df.to_html(index=False, justify="left")
-
-# Function to format email text
+# Function to format email text using tabulate for a markdown-style table
 def generate_email_body(df):
+    """Generate email body content using HTML with fixed-width font and table formatting."""
     # Generate table in github markdown format
-    table_text = tabulate(df, headers="keys", tablefmt="github", showindex=False)
-    
-    # Email content with proper spacing
+    table_text = tabulate(df, headers="keys", tablefmt="html", showindex=False)
+
+    # Email content with HTML formatting and specific font
     email_body = f"""
-Dear Xin and Wei-Zhen,
+<html>
+  <body style="font-family: 'Courier New', Courier, monospace;">
+    <p>Dear Xin and Wei-Zhen,</p>
 
-Please find the selected sensor data for your integration into the UNL CLS Daily Infection Risk Dashboard.
+    <p>Please find the selected sensor data for your integration into the UNL CLS Daily Infection Risk Dashboard.</p>
 
-Device Information:
-{table_text}
+    <p>Device Information:</p>
+    {table_text}
 
-Best regards,
-[Your Name]
+    <p>Best regards,<br>
+    [Your Name]</p>
+  </body>
+</html>
 """
-
     return email_body
 
 # Cache the function that fetches the device data to avoid re-running it unnecessarily
@@ -59,10 +58,9 @@ def main():
         The resulting lat/long values can then be obtained by this tool for each
         respective device if this location is correct and set.
 
-        An instructional video on how to set a location in Ubidots so can be 
-        [found here](https://www.loom.com/share/1c19825f15bd4a9e90f333233b1f379b?sid=7f25672c-74b6-4239-a016-52274bf71ec6).             
-        """
-    )
+        An instructional video on how to set a location in Ubidots can be 
+        [found here](https://www.loom.com/share/1c19825f15bd4a9e90f333233b1f379b?sid=7f25672c-74b6-4239-a016-52274bf71ec6).
+    """)
 
     # Step 2: Input API token
     st.write("### Step 2: Provide the CSU Ubidots API Key")
@@ -139,13 +137,13 @@ def main():
                             [CLS Daily Infection Risk Dashboard](https://phrec-irrigation.com/#/cls_monitoring).
                         """)
                         if st.button("Generate Email to UNL"):
-                            email_body_plain = generate_email_body(filtered_df)
+                            email_body_html = generate_email_body(filtered_df)
                             
                             # Display the email content in a code block for preview
-                            st.code(email_body_plain)
+                            st.code(email_body_html, language="html")
 
                             # URL encode the email body for mailto link
-                            email_body_encoded = email_body_plain.replace("\n", "%0A").replace(" ", "%20")
+                            email_body_encoded = email_body_html.replace("\n", "%0A").replace(" ", "%20")
 
                             # Create a clickable mailto link
                             mailto_link = f'mailto:xin.qiao@unl.edu,wei-zhen.liang@unl.edu?subject=Device%20Data%20for%20UNL%20CLS%20Dashboard&body={email_body_encoded}'
